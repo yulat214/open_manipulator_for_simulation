@@ -23,7 +23,7 @@ import threading
 import time
 import tty
 
-from control_msgs.action import GripperCommand
+from control_msgs.action import GripperCommand, FollowJointTrajectory
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
@@ -43,8 +43,12 @@ class KeyboardController(Node):
         )
 
         # Action client for GripperCommand
+        # self.gripper_client = ActionClient(
+        #     self, GripperCommand, '/gripper_controller/gripper_cmd'
+        # )
+
         self.gripper_client = ActionClient(
-            self, GripperCommand, '/gripper_controller/gripper_cmd'
+            self, FollowJointTrajectory, '/gripper_controller/follow_joint_trajectory'
         )
 
         # Subscriber for joint states
@@ -110,11 +114,20 @@ class KeyboardController(Node):
         self.get_logger().info(f'Arm command sent: {self.arm_joint_positions}')
 
     def send_gripper_command(self):
-        goal_msg = GripperCommand.Goal()
-        goal_msg.command.position = self.gripper_position
-        goal_msg.command.max_effort = 10.0
+        goal_msg = FollowJointTrajectory.Goal()
+        goal_msg.trajectory.joint_names = ['gripper_right_joint','gripper_left_joint']
 
-        self.get_logger().info(f'Sending gripper command: {goal_msg.command.position}')
+        point = JointTrajectoryPoint()
+        point.positions = [self.gripper_position, self.gripper_position]
+        point.time_from_start.sec = 1  # 1秒かけて動く
+
+        goal_msg.trajectory.points.append(point)
+        
+        #goal_msg = GripperCommand.Goal()
+        #goal_msg.command.position = self.gripper_position
+        #goal_msg.command.max_effort = 10.0
+
+        #self.get_logger().info(f'Sending gripper command: {goal_msg.command.position}')
         self.gripper_client.wait_for_server()
         send_goal_future = self.gripper_client.send_goal_async(goal_msg)
         rclpy.spin_until_future_complete(self, send_goal_future)
@@ -176,15 +189,11 @@ class KeyboardController(Node):
                         )
                         self.arm_joint_positions[3] = new_pos
                     elif key == 'o':  # Open gripper
-                        new_pos = min(
-                            self.gripper_position + self.gripper_delta, self.gripper_max
-                        )
+                        new_pos = min(self.gripper_position + self.gripper_delta, self.gripper_max)
                         self.gripper_position = new_pos
                         self.send_gripper_command()
                     elif key == 'p':  # Close gripper
-                        new_pos = max(
-                            self.gripper_position - self.gripper_delta, self.gripper_min
-                        )
+                        new_pos = max(self.gripper_position - self.gripper_delta, self.gripper_min)
                         self.gripper_position = new_pos
                         self.send_gripper_command()
 

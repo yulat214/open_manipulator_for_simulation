@@ -222,7 +222,7 @@
       <axis xyz="0 -1 0"/>
       <limit velocity="4.8" effort="1000" lower="-0.011" upper="0.02" />
       <dynamics damping="0.7"/>
-      <mimic joint="${prefix}gripper_left_joint" multiplier="1"/>
+	    <!--<mimic joint="${prefix}gripper_left_joint" multiplier="1"/>-->
     </joint>
 
     <link name="${prefix}gripper_right_link">
